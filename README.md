@@ -106,11 +106,42 @@ On the vote page, click **Use** on a row or use quick-fill, then **Register**.
 
 ## Architecture
 
-| Layer | Responsibility |
-|--------|----------------|
-| **Browser** (`liboqs-js` + Web Crypto + `js-sha3`) | Voter keygen, ballot encrypt/sign (Kyber + Dilithium) |
-| **Server** (FastAPI + `liboqs-python`) | IA credentials, bulletin verify, EA tally |
-| **Database** | SQLite append-only ledger |
+**4-actor architecture & crypto flow** (post-quantum secure voting):
+
+![Post-Quantum Secure Voting — 4-actor architecture and crypto flow](docs/architecture.png)
+
+### Actors
+
+| Actor | Keys / role |
+|-------|-------------|
+| **Identity Authority (IA)** | Dilithium keypair — verifies electoral roll; issues signed voter credential (VC) |
+| **Election Authority (EA)** | ML-KEM (Kyber512) keypair — encrypts/decrypts ballots at tally |
+| **Voter** | Dilithium keypair + IA-signed VC — registers and casts ballot in browser |
+| **Bulletin board** | Append-only ledger — stores ciphertexts, signatures, chain hashes (public view hides `voter_id`) |
+
+### Flow (matches diagram)
+
+| Step | Flow | What happens |
+|------|------|----------------|
+| **1** | IA → Voter | Issues signed credential after electoral-roll check |
+| **2** | EA → system | Publishes Kyber public key for ballot encryption |
+| **3** | Voter → Bulletin board | Submits signed + encrypted ballot (Kyber + AES-GCM + Dilithium + VC binding) |
+| **4** | Bulletin board → Voter | Receipt: `ballot_id` + `chain_hash` |
+| **5** | EA → Bulletin board | Decrypt at tally; publish anonymized counts |
+
+### Ballot payload
+
+- **Encrypted vote:** Kyber ciphertext + AES-256-GCM (`ballot_ciphertext`, `nonce`)
+- **Integrity:** Dilithium signature over canonical ballot fields + IA credential checks
+
+### Cryptographic primitives
+
+| Purpose | Algorithm |
+|---------|-----------|
+| Confidentiality (KEM) | ML-KEM / **Kyber512** |
+| Signatures | ML-DSA / **Dilithium2** |
+| Ballot encryption | **AES-256-GCM** |
+| Ledger chaining | **SHA3-256** |
 
 ## Browser dependency (vendored)
 
@@ -153,6 +184,7 @@ Then open http://localhost:8000/demo.html
 ```
 pq_voting/          # Python backend (crypto, API, DB, IA roll)
 static/             # UI (HTML, CSS, JS, deck.html, vendor)
+docs/               # architecture.png (README diagram)
 tests/              # pytest (33 tests)
 presentation/       # phase2_pitch.pptx, SLIDES.md
 DEMO_SCRIPT.md      # 5–7 min judge walkthrough
@@ -173,7 +205,7 @@ Dockerfile
 
 ## Team
 
-<!-- TODO: Add team name, members, institution -->
+**Sidequest**
 
 ## License
 
