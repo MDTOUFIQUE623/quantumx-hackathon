@@ -1,0 +1,181 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>PQ Voting — SDG 16 Pitch</title>
+    <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+    <link rel="stylesheet" href="/css/app.css" />
+  </head>
+  <body>
+    <div class="app-bg" aria-hidden="true"></div>
+    <div class="app-wrap">
+      <div id="site-chrome"></div>
+      <div id="nav"></div>
+      <main class="page-main">
+    <div class="plain-example">
+      <strong>In plain English:</strong>
+      We help people trust elections online: only real voters get a pass, each person votes once,
+      ballots stay secret but can be audited, and the math is chosen so future quantum computers
+      cannot easily break old locks years later.
+    </div>
+
+    <section class="pitch-slide card">
+      <h2>1 — Problem</h2>
+      <p>
+        Democracies depend on elections people can <strong>trust</strong>. Digital voting must be
+        private, verifiable, and resistant to fraud — including threats that do not exist yet.
+      </p>
+      <ul>
+        <li><strong>Wrong-area voting</strong> — voting outside one’s constituency</li>
+        <li><strong>Double voting</strong> — same person votes twice</li>
+        <li><strong>Ballot tampering</strong> — changing votes in transit</li>
+        <li><strong>“Steal now, read later”</strong> — copy encrypted votes today; break old locks with tomorrow’s quantum computers</li>
+      </ul>
+      <div class="plain-example">
+        <strong>Example:</strong> A student uses a Delhi college ID to vote in a Pune-only election,
+        or someone votes online and again by post — our demo blocks both. A spy archiving today’s
+        vote files is like saving locked safes until a better drill exists; we use safes quantum
+        drills are not expected to open.
+      </div>
+    </section>
+
+    <section class="pitch-slide card">
+      <h2>2 — SDG 16 alignment</h2>
+      <p class="plain-inline" style="margin-bottom: 0.75rem">
+        UN Goal 16 = peaceful, just societies with strong, honest institutions (courts, elections, government).
+      </p>
+      <table class="data">
+        <thead>
+          <tr><th>SDG 16 target</th><th>How this MVP helps</th><th>Simple example</th></tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>16.6 — Accountable institutions</td>
+            <td>Voter list check + public board + published results</td>
+            <td>Anyone can see votes were counted; rules are enforced by software</td>
+          </tr>
+          <tr>
+            <td>16.7 — Inclusive participation</td>
+            <td>Vote from a browser; keep a receipt number</td>
+            <td>Like remote voting with proof your ballot arrived</td>
+          </tr>
+          <tr>
+            <td>16.10 — Access to information</td>
+            <td>Public list of sealed ballots without names</td>
+            <td>Transparent process without exposing your choice</td>
+          </tr>
+        </tbody>
+      </table>
+    </section>
+
+    <section class="pitch-slide card">
+      <h2>3 — Who does what (4 roles)</h2>
+      <table class="data">
+        <thead>
+          <tr><th>Role</th><th>Technical name</th><th>Everyday job</th></tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>Registration desk</td>
+            <td>Identity Authority (IA)</td>
+            <td>Checks voter list; issues signed voter pass</td>
+          </tr>
+          <tr>
+            <td>Voter</td>
+            <td>Browser</td>
+            <td>Seals ballot in an encrypted envelope; keeps receipt</td>
+          </tr>
+          <tr>
+            <td>Public notice board</td>
+            <td>Bulletin board</td>
+            <td>Shows “a ballot was received” without showing names</td>
+          </tr>
+          <tr>
+            <td>Election officer</td>
+            <td>Election Authority (EA)</td>
+            <td>Opens envelopes with master key; publishes counts</td>
+          </tr>
+        </tbody>
+      </table>
+      <div class="plain-example">
+        <strong>Example flow:</strong> Ananya registers in Pune → votes for a candidate → gets receipt
+        #ABC → anyone sees #ABC on the board (not her name) → officer runs tally → “Candidate X: 42 votes.”
+      </div>
+    </section>
+
+    <section class="pitch-slide card">
+      <h2>4 — What we prove live</h2>
+      <ol>
+        <li><a href="/interop.html">Browser and server agree on security</a> — same lock standards</li>
+        <li><a href="/">Register + vote</a> — real voter list check</li>
+        <li><a href="/board.html">Public board</a> — transparency without names</li>
+        <li><a href="/tally.html">Official count</a> — publish results</li>
+        <li><a href="/attacks.html">Attack lab</a> — cheats blocked (fake ID, double vote, etc.)</li>
+      </ol>
+    </section>
+
+    <section class="pitch-slide card">
+      <h2>5 — Quantum threat (why now)</h2>
+      <table class="data">
+        <thead>
+          <tr><th></th><th>Old math locks</th><th>Our quantum-safe locks</th></tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>Future super-computers</td>
+            <td class="err-text">May crack RSA-style encryption</td>
+            <td class="ok-text">Different puzzle — still believed safe</td>
+          </tr>
+          <tr>
+            <td>For stored votes</td>
+            <td>Archive today → read in 10 years</td>
+            <td>Designed for long-term secrecy</td>
+          </tr>
+        </tbody>
+      </table>
+      <div class="plain-example">
+        <strong>Say to judges:</strong> “We are not waiting for quantum computers to arrive before we
+        upgrade election security — we use locks NIST already standardized for the quantum era.”
+      </div>
+    </section>
+
+    <section class="pitch-slide card">
+      <h2>6 — Honest limits (demo vs real world)</h2>
+      <table class="data">
+        <thead>
+          <tr><th>Topic</th><th>Tonight’s demo</th><th>Real election</th></tr>
+        </thead>
+        <tbody>
+          <tr><td>Voter keys</td><td>Stored in browser tab only</td><td>Smart card / phone secure chip</td></tr>
+          <tr><td>Privacy</td><td>Board hides names</td><td>Extra shuffle step (mix-net) so nobody can link voter to ballot</td></tr>
+          <tr><td>Voter list</td><td>Sample table in app</td><td>Official government electoral roll + Aadhaar</td></tr>
+          <tr><td>Counting</td><td>One officer key</td><td>Several trustees must agree (2-of-3 keys)</td></tr>
+        </tbody>
+      </table>
+    </section>
+
+    <section class="pitch-slide card pitch-cta">
+      <h2>7 — Closing line</h2>
+      <p>
+        We built a working online election you can try in five minutes — with a fraud lab that
+        shows defences actually work, and math chosen so votes stay safe in a quantum future.
+      </p>
+      <p class="copy-hint">
+        Step-by-step script: <code>DEMO_SCRIPT.md</code> · Short talk track: <code>PITCH.md</code>
+      </p>
+    </section>
+      </main>
+      <footer id="site-footer"></footer>
+    </div>
+
+    <script type="module">
+      import { initPage } from "./js/ui.js";
+      initPage({
+        title: "SDG 16 pitch",
+        tagline: "Peace, justice & strong institutions · post-quantum e-voting",
+        active: "pitch",
+      });
+    </script>
+  </body>
+</html>

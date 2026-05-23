@@ -1,0 +1,269 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>PQ Voting — Attack Lab</title>
+    <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+    <link rel="stylesheet" href="/css/app.css" />
+  </head>
+  <body>
+    <div class="app-bg" aria-hidden="true"></div>
+    <div class="app-wrap">
+      <div id="site-chrome"></div>
+      <div id="nav"></div>
+      <main class="page-main">
+    <p class="note warn">
+      Buttons call the <strong>real</strong> registration and vote APIs. Attacks that register a
+      dedicated test voter can only be replayed after deleting
+      <code>data/pq_voting.db</code> (or resetting the Docker volume).
+    </p>
+
+    <div class="plain-example">
+      <strong>In plain English:</strong>
+      This page is a “fraud attempt” playground. We try common election cheats; the system should
+      block each one. Green ✓ BLOCKED in the results means the defence worked.
+    </div>
+
+    <div class="card">
+      <h2>What we test (simple view)</h2>
+      <div class="table-wrap">
+      <table class="data">
+        <thead>
+          <tr><th>Cheating attempt</th><th>Real-life example</th></tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>Fake voter</td>
+            <td>Person not on the official voter list tries to register</td>
+          </tr>
+          <tr>
+            <td>Wrong area</td>
+            <td>Pune voter selects Delhi on the form</td>
+          </tr>
+          <tr>
+            <td>Vote twice</td>
+            <td>Same person submits two ballots in one election</td>
+          </tr>
+          <tr>
+            <td>Fake signature</td>
+            <td>Someone forges the digital “signature” on a ballot</td>
+          </tr>
+          <tr>
+            <td>Quantum spy</td>
+            <td>Steal encrypted votes today to read them years later with a quantum computer</td>
+          </tr>
+        </tbody>
+      </table>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>Threat model (technical)</h2>
+      <div class="table-wrap">
+      <table class="data" id="threatTable">
+        <thead>
+          <tr>
+            <th>Attack</th>
+            <th>Threat</th>
+            <th>Mitigation</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody></tbody>
+      </table>
+      </div>
+      <div class="btn-row" style="margin-top: 1rem">
+        <button type="button" id="runAll">Run all live attacks</button>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>Result</h2>
+      <pre id="log" class="output">Loading attack catalog…</pre>
+    </div>
+      </main>
+      <footer id="site-footer"></footer>
+    </div>
+
+    <script type="module">
+      import { plainExample } from "./js/plain-english.js";
+      import { initPage } from "./js/ui.js";
+
+      const logEl = document.getElementById("log");
+      const runAllBtn = document.getElementById("runAll");
+      let ctx = null;
+      let liveIds = [];
+      let attackCatalog = [];
+      let running = false;
+
+      function withPlainSummary(id, result) {
+        const meta = attackCatalog.find((a) => a.id === id);
+        if (meta?.plain_example) result.plain_summary = meta.plain_example;
+        return result;
+      }
+
+      function setLog(text, className = "output") {
+        logEl.className = className;
+        logEl.textContent = text;
+      }
+
+      function setButtonsDisabled(disabled) {
+        running = disabled;
+        runAllBtn.disabled = disabled;
+        document.querySelectorAll(".run-attack").forEach((b) => {
+          b.disabled = disabled;
+        });
+      }
+
+      let runAttackFn = null;
+      let formatAttackResultFn = null;
+
+      async function loadAttackModule() {
+        if (runAttackFn) return;
+        const mod = await import("./js/attacks.js");
+        runAttackFn = mod.runAttack;
+        formatAttackResultFn = mod.formatAttackResult;
+      }
+
+      async function runOne(id) {
+        if (running) return;
+        setButtonsDisabled(true);
+        setLog(`Running ${id}… (browser PQ crypto may take 10–30s)`);
+        try {
+          await loadAttackModule();
+          const r = withPlainSummary(id, await runAttackFn(id, ctx));
+          setLog(formatAttackResultFn(r), r.blocked ? "output ok-text" : "output err-text");
+        } catch (err) {
+          console.error(err);
+          setLog(`Error running ${id}:\n${err.message}\n\nCheck DevTools (F12) for details.`, "output err-text");
+        } finally {
+          setButtonsDisabled(false);
+        }
+      }
+
+      async function runAll() {
+        if (running || !ctx) return;
+        setButtonsDisabled(true);
+        const ids = [...liveIds, "quantum_hndl"];
+        const lines = [];
+        setLog(
+          `Running ${ids.length} attacks…\n` +
+            `PQ key generation in the browser can take 1–3 minutes total.\n` +
+            `Results will appear below as each attack finishes.\n`,
+        );
+
+        try {
+          await loadAttackModule();
+          setLog("Warming up PQ library (first keygen)…");
+          const { generateVoterKeyPair } = await import("./js/crypto.js");
+          await generateVoterKeyPair();
+
+          for (let i = 0; i < ids.length; i += 1) {
+            const id = ids[i];
+            const header = `[${i + 1}/${ids.length}] ${id}…`;
+            setLog(`${header}\n\n${lines.join("\n\n")}`);
+            try {
+              const r = withPlainSummary(id, await runAttackFn(id, ctx));
+              lines.push(formatAttackResultFn(r));
+            } catch (err) {
+              console.error(err);
+              lines.push(`${id}: Error — ${err.message}`);
+            }
+            lines.push("—".repeat(40));
+          }
+          setLog(lines.join("\n\n"));
+        } catch (err) {
+          console.error(err);
+          setLog(
+            `Run all failed:\n${err.message}\n\n` +
+              (lines.length ? `\nPartial results:\n${lines.join("\n\n")}` : ""),
+            "output err-text",
+          );
+        } finally {
+          setButtonsDisabled(false);
+        }
+      }
+
+      async function init() {
+        try {
+          initPage({
+            title: "Attack lab",
+            tagline: "Try election fraud — watch the system block it",
+            active: "attacks",
+          });
+          await loadAttackModule();
+
+          const cfgRes = await fetch("/api/demo/attacks");
+          if (!cfgRes.ok) {
+            throw new Error(
+              `GET /api/demo/attacks returned ${cfgRes.status}. ` +
+                "Restart the API (docker compose restart api) so Phase 7 routes load.",
+            );
+          }
+          const cfg = await cfgRes.json();
+          if (!Array.isArray(cfg.attacks)) {
+            throw new Error("Invalid attack catalog from server.");
+          }
+
+          const demoRes = await fetch("/api/demo/config");
+          if (!demoRes.ok) {
+            throw new Error(`GET /api/demo/config returned ${demoRes.status}`);
+          }
+          const demoCfg = await demoRes.json();
+
+          ctx = {
+            labVoter: cfg.attack_lab_voter,
+            attackVoters: cfg.attack_voters,
+            sampleVoters: demoCfg.sample_eligible_voters || demoCfg.demo_voters,
+            electionId: cfg.default_election_id,
+          };
+
+          attackCatalog = cfg.attacks;
+          liveIds = cfg.attacks.filter((a) => !a.educational_only).map((a) => a.id);
+
+          const tbody = document.querySelector("#threatTable tbody");
+          cfg.attacks.forEach((a) => {
+            const tr = document.createElement("tr");
+            const btnLabel = a.educational_only ? "Explain" : "Run";
+            tr.innerHTML = `
+          <td><strong>${a.title}</strong><br /><span class="copy-hint">${a.id}</span></td>
+          <td>${a.threat}</td>
+          <td>${a.mitigation}</td>
+          <td>
+            <button type="button" class="secondary run-attack" data-id="${a.id}" style="margin:0;width:auto;padding:0.35rem 0.65rem">
+              ${btnLabel}
+            </button>
+            ${a.expected_status != null ? `<div class="copy-hint">→ HTTP ${a.expected_status}</div>` : ""}
+          </td>`;
+            tbody.appendChild(tr);
+            if (a.plain_example) {
+              const plainTr = document.createElement("tr");
+              plainTr.className = "plain-row";
+              plainTr.innerHTML = `<td colspan="4">${plainExample(a.plain_example)}</td>`;
+              tbody.appendChild(plainTr);
+            }
+          });
+
+          document.querySelectorAll(".run-attack").forEach((btn) => {
+            btn.addEventListener("click", () => runOne(btn.dataset.id));
+          });
+
+          runAllBtn.addEventListener("click", () => runAll());
+
+          setLog("Ready. Click Run on one attack, or Run all live attacks (allow 1–3 min).");
+        } catch (err) {
+          console.error(err);
+          const hint =
+            err.message?.includes("liboqs") || err.message?.includes("fetch")
+              ? "\n\nTip: hard-refresh (Ctrl+Shift+R). Ensure /vendor/liboqs-js is served and you have network for js-sha3 CDN."
+              : "";
+          setLog(`Failed to load attack lab:\n${err.message}${hint}`, "output err-text");
+          runAllBtn.disabled = true;
+        }
+      }
+
+      init();
+    </script>
+  </body>
+</html>

@@ -1,0 +1,11 @@
+data/
+__pycache__/
+*.pyc
+.pytest_cache/
+.venv/
+venv/
+node_modules/
+static/vendor/node_modules/
+# liboqs-js is COMMITTED (required for browser voting after git clone)
+# Refresh via static/vendor/README.md — do not gitignore liboqs-js/
+*.db

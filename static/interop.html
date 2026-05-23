@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>PQ Voting — Interop Smoke Test</title>
+    <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+    <link rel="stylesheet" href="/css/app.css" />
+  </head>
+  <body>
+    <div class="app-bg" aria-hidden="true"></div>
+    <div class="app-wrap">
+      <div id="site-chrome"></div>
+      <div id="nav"></div>
+      <main class="page-main">
+    <div class="plain-example">
+      <strong>In plain English:</strong>
+      Your phone and the election server must use the same type of digital lock and signature.
+      This page runs a quick handshake test — like both sides proving they have the same brand of
+      tamper-proof seal before voting starts.
+    </div>
+    <p class="copy-hint">
+      <strong>Technical:</strong> Checks quantum-safe signatures (Dilithium) and encryption (Kyber)
+      work the same in the browser and on the server.
+    </p>
+    <p class="copy-hint">
+      <strong>Demo only:</strong> voting keys stay in this browser tab until you close it.
+    </p>
+    <div class="card">
+      <h2>Crypto handshake test</h2>
+      <button id="run" type="button">Run smoke test</button>
+      <pre id="log" class="output">Click “Run smoke test”…</pre>
+    </div>
+      </main>
+      <footer id="site-footer"></footer>
+    </div>
+    <script type="module">
+      import { initPage } from "./js/ui.js";
+      initPage({
+        title: "Browser ↔ server interop",
+        tagline: "Confirm quantum-safe locks match on both sides",
+        active: "interop",
+      });
+
+      const logEl = document.getElementById("log");
+      let cryptoApi;
+      try {
+        cryptoApi = await import("./js/crypto.js");
+      } catch (err) {
+        logEl.textContent = `Failed to load browser crypto module:\n${err.message}\n\nCheck DevTools console (F12) for details.`;
+        throw err;
+      }
+
+      const {
+        generateVoterKeyPair,
+        signPayload,
+        encapsulateKyber,
+        canonicalJson,
+      } = cryptoApi;
+
+      const API = window.location.origin;
+
+      function log(lines) {
+        document.getElementById("log").textContent = lines.join("\n");
+      }
+
+      const runBtn = document.getElementById("run");
+
+      runBtn.addEventListener("click", async () => {
+        runBtn.disabled = true;
+        const lines = ["Running… (WASM load can take a few seconds on first click)"];
+        log(lines);
+        try {
+          lines.push("Fetching EA public key…");
+          log(lines);
+          const keysRes = await fetch(`${API}/api/authorities/public-keys`);
+          const keys = await keysRes.json();
+          lines.push(`Server algorithms: ${JSON.stringify(keys.algorithms)}`);
+
+          lines.push("\n[1] Dilithium2 / ML-DSA-44 signature interop");
+          const voter = await generateVoterKeyPair();
+          const testMessage = canonicalJson({
+            test: "pq-voting-interop",
+            ts: new Date().toISOString(),
+          });
+          const { signatureB64 } = await signPayload(
+            JSON.parse(testMessage),
+            voter.secretKeyHex,
+          );
+          const sigRes = await fetch(`${API}/api/interop/verify-signature`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              message: testMessage,
+              signature_b64: signatureB64,
+              public_key_hex: voter.publicKeyHex,
+            }),
+          });
+          const sigBody = await sigRes.json();
+          lines.push(
+            sigBody.valid
+              ? "  ✓ Server verified browser signature"
+              : "  ✗ Signature verification FAILED",
+          );
+
+          lines.push("\n[2] Kyber512 KEM interop");
+          const kem = await encapsulateKyber(
+            keys.ea_public_key_hex,
+            keys.algorithms?.kem,
+          );
+          lines.push(`  Browser shared_secret fingerprint: ${kem.sharedSecretFingerprint}`);
+          const decapRes = await fetch(`${API}/api/interop/decap-kem`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ kem_ciphertext_b64: kem.kemCiphertextB64 }),
+          });
+          const decapBody = await decapRes.json();
+          const match =
+            decapBody.shared_secret_fingerprint === kem.sharedSecretFingerprint;
+          lines.push(
+            match
+              ? "  ✓ EA decapsulated to the same shared secret"
+              : "  ✗ KEM shared secret mismatch",
+          );
+
+          const allOk = sigBody.valid && match;
+          lines.push(
+            allOk
+              ? "\n=== ALL INTEROP CHECKS PASSED ==="
+              : "\n=== INTEROP FAILED — check algorithm pairing ===",
+          );
+        } catch (err) {
+          lines.push(`\nError: ${err.message}`);
+          console.error(err);
+        } finally {
+          runBtn.disabled = false;
+        }
+        log(lines);
+      });
+    </script>
+  </body>
+</html>

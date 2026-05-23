@@ -1,0 +1,208 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>PQ Voting — Public Bulletin Board</title>
+    <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+    <link rel="stylesheet" href="/css/app.css" />
+    <style>
+      .board-toolbar {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.65rem;
+        align-items: flex-end;
+        margin-bottom: 0.5rem;
+      }
+      .board-toolbar label {
+        flex: 1;
+        min-width: 200px;
+        margin-top: 0;
+      }
+      .board-toolbar button {
+        width: auto;
+        margin-top: 0;
+        flex: 0 1 auto;
+      }
+      .trunc {
+        max-width: 120px;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+      .empty {
+        color: var(--muted);
+        font-style: italic;
+        padding: 1.5rem;
+        text-align: center;
+      }
+      #tableWrap table {
+        width: 100%;
+        border-collapse: collapse;
+        font-size: 0.85rem;
+      }
+      #tableWrap th,
+      #tableWrap td {
+        border-bottom: 1px solid var(--border);
+        padding: 0.65rem;
+      }
+      #tableWrap th {
+        background: #f8fafc;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="app-bg" aria-hidden="true"></div>
+    <div class="app-wrap">
+      <div id="site-chrome"></div>
+      <div id="nav"></div>
+      <main class="page-main">
+    <div class="plain-example">
+      <strong>In plain English:</strong>
+      Think of a glass wall at the polling station showing “Ballot #7 received, Ballot #8 received…”
+      without showing who voted or how they voted. Everyone can see the list grew honestly; only
+      scrambled content is visible.
+    </div>
+    <p class="note">
+      <strong>Technical (demo):</strong> This page shows receipt numbers and scrambled ballot data —
+      not voter names. The server still remembers who voted (to stop double voting); a full production
+      system could add an extra shuffle so even the server cannot link person to ballot.
+    </p>
+
+    <div class="card">
+      <h2>Election ballots on record</h2>
+      <div class="board-toolbar">
+        <label for="election">Election</label>
+        <select id="election"></select>
+        <button id="refresh" type="button" class="btn-sm" style="width:auto">Refresh</button>
+        <button id="auto" type="button" class="secondary btn-sm">Auto-refresh (10s)</button>
+      </div>
+      <div class="stats" id="stats"></div>
+      <div class="table-wrap" id="tableWrap"></div>
+    </div>
+      </main>
+      <footer id="site-footer"></footer>
+    </div>
+
+    <script type="module">
+      import { initPage } from "./js/ui.js";
+      initPage({
+        title: "Public bulletin board",
+        tagline: "Transparent record of sealed ballots — no voter names",
+        active: "board",
+        wide: true,
+      });
+
+      const API = window.location.origin;
+      let autoTimer = null;
+
+      function shortHex(s, n = 12) {
+        if (!s || s.length <= n * 2) return s || "";
+        return `${s.slice(0, n)}…${s.slice(-n)}`;
+      }
+
+      function renderStats(data) {
+        document.getElementById("stats").innerHTML = `
+          <div class="stat"><strong>${data.ballot_count}</strong> ballots</div>
+          <div class="stat"><span class="mono">${shortHex(data.latest_chain_hash, 8)}</span><br />latest chain hash</div>
+          <div class="stat"><span class="mono">${shortHex(data.genesis_chain_hash, 8)}</span><br />genesis prev hash</div>
+        `;
+      }
+
+      function renderTable(data) {
+        const wrap = document.getElementById("tableWrap");
+        if (!data.ballots.length) {
+          wrap.innerHTML = '<p class="empty">No ballots on the board for this election yet.</p>';
+          return;
+        }
+
+        const rows = data.ballots
+          .map(
+            (b) => `
+          <tr>
+            <td>${b.position}</td>
+            <td class="mono trunc" title="${b.ballot_id}">${shortHex(b.ballot_id, 8)}</td>
+            <td class="mono trunc" title="${b.chain_hash}">${shortHex(b.chain_hash, 8)}</td>
+            <td>${b.submitted_at?.slice(0, 19) || "—"}</td>
+            <td>
+              <details>
+                <summary>Encrypted payload</summary>
+                <div class="mono" style="font-size:0.75rem;margin-top:0.25rem">
+                  <div><strong>kem:</strong> ${shortHex(b.kem_ciphertext, 16)}</div>
+                  <div><strong>nonce:</strong> ${shortHex(b.nonce, 8)}</div>
+                  <div><strong>ballot:</strong> ${shortHex(b.ballot_ciphertext, 16)}</div>
+                  <div><strong>sig:</strong> ${shortHex(b.signature, 16)}</div>
+                </div>
+              </details>
+            </td>
+          </tr>`,
+          )
+          .join("");
+
+        wrap.innerHTML = `
+          <table>
+            <thead>
+              <tr>
+                <th>#</th>
+                <th>ballot_id</th>
+                <th>chain_hash</th>
+                <th>submitted</th>
+                <th>details</th>
+              </tr>
+            </thead>
+            <tbody>${rows}</tbody>
+          </table>
+          <p style="font-size:0.85rem;color:#555">${data.privacy_note}</p>
+        `;
+      }
+
+      async function loadElections() {
+        const res = await fetch(`${API}/api/board/elections`);
+        const data = await res.json();
+        const sel = document.getElementById("election");
+        sel.innerHTML = "";
+        data.elections.forEach((e) => {
+          const opt = document.createElement("option");
+          opt.value = e.election_id;
+          opt.textContent = `${e.title} (${e.election_id})`;
+          sel.appendChild(opt);
+        });
+        const params = new URLSearchParams(location.search);
+        if (params.get("election_id")) {
+          sel.value = params.get("election_id");
+        }
+      }
+
+      async function loadBoard() {
+        const electionId = document.getElementById("election").value;
+        if (!electionId) return;
+        const res = await fetch(`${API}/api/board/${electionId}`);
+        const data = await res.json();
+        if (!res.ok) {
+          document.getElementById("tableWrap").textContent = JSON.stringify(data, null, 2);
+          return;
+        }
+        renderStats(data);
+        renderTable(data);
+        history.replaceState(null, "", `?election_id=${electionId}`);
+      }
+
+      document.getElementById("refresh").addEventListener("click", loadBoard);
+      document.getElementById("election").addEventListener("change", loadBoard);
+      document.getElementById("auto").addEventListener("click", (e) => {
+        if (autoTimer) {
+          clearInterval(autoTimer);
+          autoTimer = null;
+          e.target.textContent = "Auto-refresh (10s)";
+          return;
+        }
+        autoTimer = setInterval(loadBoard, 10000);
+        e.target.textContent = "Stop auto-refresh";
+        loadBoard();
+      });
+
+      await loadElections();
+      await loadBoard();
+    </script>
+  </body>
+</html>

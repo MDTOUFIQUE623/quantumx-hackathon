@@ -1,0 +1,229 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>QuantumX PQ Voting — Presentation Deck</title>
+    <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+    <link rel="stylesheet" href="/css/app.css" />
+    <style>
+      body {
+        max-width: 880px;
+        padding-bottom: 4rem;
+      }
+      .deck-nav {
+        position: fixed;
+        bottom: 1rem;
+        left: 50%;
+        transform: translateX(-50%);
+        display: flex;
+        gap: 0.5rem;
+        z-index: 50;
+        background: rgba(255, 255, 255, 0.95);
+        padding: 0.5rem 0.75rem;
+        border-radius: 999px;
+        box-shadow: var(--shadow-lg);
+        border: 1px solid var(--border);
+      }
+      .deck-nav button {
+        width: auto;
+        margin: 0;
+        padding: 0.45rem 1rem;
+        font-size: 0.85rem;
+      }
+      .slide {
+        min-height: 62vh;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        scroll-margin-top: 5rem;
+      }
+      .slide h2 {
+        font-size: 1.75rem;
+        margin-bottom: 1rem;
+      }
+      .slide h2::before {
+        display: none;
+      }
+      .slide ul {
+        font-size: 1.05rem;
+        line-height: 1.7;
+      }
+      .slide-num {
+        font-size: 0.75rem;
+        color: var(--muted);
+        text-transform: uppercase;
+        letter-spacing: 0.08em;
+        margin-bottom: 0.5rem;
+      }
+      .big-quote {
+        font-size: 1.35rem;
+        font-weight: 600;
+        color: var(--primary-dark);
+        border-left: 4px solid var(--primary);
+        padding-left: 1rem;
+        margin: 1rem 0;
+      }
+      @media print {
+        .deck-nav,
+        .nav-shell {
+          display: none !important;
+        }
+        .slide {
+          page-break-after: always;
+          min-height: auto;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="app-bg" aria-hidden="true"></div>
+    <div class="app-wrap">
+      <div id="site-chrome"></div>
+      <div id="nav"></div>
+      <main class="page-main">
+        <p class="note" style="margin-bottom: 1.5rem">
+          <strong>Presentation deck</strong> — scroll or use buttons below. Print to PDF:
+          <kbd>Ctrl+P</kbd> → Save as PDF. Full demo: <a href="/demo.html">Judge guide</a>.
+        </p>
+
+        <section class="card slide" id="s1">
+          <p class="slide-num">Slide 1 / 10</p>
+          <h2>Post-quantum secure e-voting</h2>
+          <p class="big-quote">Trustworthy digital elections for the quantum era · SDG 16</p>
+          <ul>
+            <li>End-to-end demo: register → vote → verify → audit → tally</li>
+            <li>Live attack lab proving fraud is blocked</li>
+            <li>Kyber + Dilithium in browser and server</li>
+          </ul>
+        </section>
+
+        <section class="card slide" id="s2">
+          <p class="slide-num">Slide 2 / 10</p>
+          <h2>The problem</h2>
+          <ul>
+            <li>Fake voters and wrong-constituency registration</li>
+            <li>Double voting and forged ballots</li>
+            <li>“Steal encrypted votes today, decrypt tomorrow” (quantum threat)</li>
+          </ul>
+          <div class="plain-example">
+            <strong>Example:</strong> Legacy RSA locks on archived ballots may fail when quantum computers arrive.
+          </div>
+        </section>
+
+        <section class="card slide" id="s3">
+          <p class="slide-num">Slide 3 / 10</p>
+          <h2>SDG 16 — Strong institutions</h2>
+          <table class="data">
+            <tr><th>Target</th><th>Our MVP</th></tr>
+            <tr><td>16.6 Accountable institutions</td><td>Electoral roll + public board + tally</td></tr>
+            <tr><td>16.7 Inclusive participation</td><td>Browser voting + verifiable receipt</td></tr>
+            <tr><td>16.10 Transparency</td><td>Anyone audits ballots without seeing names</td></tr>
+          </table>
+        </section>
+
+        <section class="card slide" id="s4">
+          <p class="slide-num">Slide 4 / 10</p>
+          <h2>Architecture (4 roles)</h2>
+          <table class="data">
+            <tr><th>Role</th><th>Job</th></tr>
+            <tr><td>Identity Authority</td><td>Checks voter list; issues signed pass</td></tr>
+            <tr><td>Voter (browser)</td><td>Seals ballot; keeps receipt</td></tr>
+            <tr><td>Bulletin board</td><td>Public record — no voter names</td></tr>
+            <tr><td>Election Authority</td><td>Decrypts; publishes counts</td></tr>
+          </table>
+        </section>
+
+        <section class="card slide" id="s5">
+          <p class="slide-num">Slide 5 / 10</p>
+          <h2>Post-quantum cryptography</h2>
+          <table class="data">
+            <tr><th></th><th>Classical</th><th>Our stack</th></tr>
+            <tr><td>Ballot secrecy</td><td>RSA / ECDH</td><td>Kyber512 (ML-KEM)</td></tr>
+            <tr><td>Signatures</td><td>ECDSA</td><td>Dilithium2 (ML-DSA-44)</td></tr>
+            <tr><td>Quantum risk</td><td>Shor’s algorithm</td><td>Lattice problems</td></tr>
+          </table>
+        </section>
+
+        <section class="card slide" id="s6">
+          <p class="slide-num">Slide 6 / 10</p>
+          <h2>Live demo flow (5 min)</h2>
+          <ol style="font-size: 1.05rem; line-height: 1.8">
+            <li>Interop — browser ↔ server crypto match</li>
+            <li>Register + vote (sample voter: Ananya, Pune)</li>
+            <li>Verify receipt on bulletin board</li>
+            <li>Public board + EA tally</li>
+            <li>Attack lab — show 403 / 409 blocks</li>
+          </ol>
+        </section>
+
+        <section class="card slide" id="s7">
+          <p class="slide-num">Slide 7 / 10</p>
+          <h2>Defences we demonstrate</h2>
+          <ul>
+            <li>Not on roll → registration denied</li>
+            <li>Wrong constituency → denied</li>
+            <li>Double vote → second ballot rejected</li>
+            <li>Forged signature → invalid ballot</li>
+          </ul>
+        </section>
+
+        <section class="card slide" id="s8">
+          <p class="slide-num">Slide 8 / 10</p>
+          <h2>Tech stack</h2>
+          <ul>
+            <li><strong>Browser:</strong> liboqs-js, Web Crypto AES-GCM, SHA3-256</li>
+            <li><strong>Server:</strong> FastAPI, liboqs-python, SQLite ledger</li>
+            <li><strong>Deploy:</strong> Docker Compose (one command)</li>
+            <li><strong>Tests:</strong> 33 automated pytest cases</li>
+          </ul>
+        </section>
+
+        <section class="card slide" id="s9">
+          <p class="slide-num">Slide 9 / 10</p>
+          <h2>Honest limits &amp; roadmap</h2>
+          <ul>
+            <li>Demo keys in browser tab — production uses hardware tokens</li>
+            <li>Simulated electoral roll — real UIDAI / government APIs later</li>
+            <li>Future: mix-nets, threshold tally, zero-knowledge proofs</li>
+          </ul>
+        </section>
+
+        <section class="card slide pitch-cta" id="s10">
+          <p class="slide-num">Slide 10 / 10</p>
+          <h2>Thank you</h2>
+          <p class="big-quote">Strong institutions need cryptography that survives the quantum era.</p>
+          <p>
+            <strong>Try it:</strong> <code>docker compose up --build</code> →
+            <a href="/demo.html">localhost:8000/demo.html</a>
+          </p>
+          <p class="copy-hint">GitHub repo · README · DEMO_SCRIPT.md · This deck (Print → PDF)</p>
+        </section>
+      </main>
+      <footer id="site-footer"></footer>
+    </div>
+
+    <div class="deck-nav" aria-label="Slide navigation">
+      <button type="button" class="secondary" id="prev">← Prev</button>
+      <button type="button" id="next">Next →</button>
+    </div>
+
+    <script type="module">
+      import { initPage } from "./js/ui.js";
+      initPage({
+        title: "Presentation deck",
+        tagline: "10 slides · Print to PDF for submission",
+        active: "deck",
+      });
+
+      const slides = [...document.querySelectorAll(".slide")];
+      let i = 0;
+      const go = (n) => {
+        i = Math.max(0, Math.min(slides.length - 1, n));
+        slides[i].scrollIntoView({ behavior: "smooth", block: "start" });
+      };
+      document.getElementById("prev").onclick = () => go(i - 1);
+      document.getElementById("next").onclick = () => go(i + 1);
+    </script>
+  </body>
+</html>

@@ -1,0 +1,162 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>PQ Voting — Judge Demo Guide</title>
+    <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+    <link rel="stylesheet" href="/css/app.css" />
+  </head>
+  <body>
+    <div class="app-bg" aria-hidden="true"></div>
+    <div class="app-wrap">
+      <div id="site-chrome"></div>
+      <div id="nav"></div>
+      <main class="page-main">
+    <div class="plain-example">
+      <strong>In plain English:</strong>
+      This is like a mini election office in your browser: check ID → get a voter pass → cast a
+      secret ballot → get a receipt → anyone can see ballots were recorded (without names) →
+      election officials count them. We use future-proof locks so votes stay safe even against
+      tomorrow’s quantum computers.
+    </div>
+
+    <div class="card">
+      <h2>Demo flow (≈5 min)</h2>
+      <ol>
+        <li>
+          <a href="/interop.html">Quick crypto check</a> — prove browser and server speak the same “lock language” (30 s)
+          <div class="plain-inline">Like checking that your phone and the bank app use the same security chip standard.</div>
+        </li>
+        <li>
+          <a href="/">Register + vote</a> — pick a sample voter below (2 min)
+          <div class="plain-inline">Show ID, get a digital voter pass, pick a candidate, submit a sealed ballot.</div>
+        </li>
+        <li>
+          <a href="/">Verify receipt</a> — paste your ballot reference number (30 s)
+          <div class="plain-inline">Like tracking a parcel: “Yes, your ballot is on the public list.”</div>
+        </li>
+        <li>
+          <a href="/board.html">Public bulletin board</a> — see recorded ballots without names (30 s)
+          <div class="plain-inline">A glass wall showing locked ballot boxes, not who dropped them in.</div>
+        </li>
+        <li>
+          <a href="/tally.html">Count votes</a> — official decrypts and publishes totals (1 min)
+          <div class="plain-inline">Only the election officer has the master key to open boxes and count.</div>
+        </li>
+        <li>
+          <a href="/attacks.html">Attack lab</a> — try cheats; watch them fail (1 min)
+          <div class="plain-inline">Fake ID, double voting, forged ballot — all blocked.</div>
+        </li>
+        <li>
+          <a href="/pitch.html">SDG 16 story</a> — why this matters for fair elections (2 min)
+        </li>
+      </ol>
+    </div>
+
+    <div class="card">
+      <h2>Sample eligible voters (electoral roll)</h2>
+      <p class="note">
+        The <strong>Identity Authority</strong> (like a registration desk) only gives a voter pass when
+        <strong>name, birthday, ID number, and area</strong> all match the list below.
+      </p>
+      <div class="plain-example">
+        <strong>Example:</strong> Use <em>Ananya Desai</em> with constituency <em>Pune</em>. If you use her ID
+        but select <em>Delhi</em>, registration fails — she is not on the Delhi list.
+      </div>
+      <div id="votersTable"></div>
+    </div>
+
+    <div class="card">
+      <h2>Scenarios to demonstrate</h2>
+      <table class="data">
+        <thead>
+          <tr><th>What you do</th><th>What should happen</th><th>Simple explanation</th></tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>Register with a table row (correct area)</td>
+            <td class="ok-text">Success — voter pass issued</td>
+            <td>Valid voter gets their digital pass</td>
+          </tr>
+          <tr>
+            <td>Same person, wrong area in dropdown</td>
+            <td class="err-text">Blocked (403)</td>
+            <td>Cannot vote in a city you are not registered for</td>
+          </tr>
+          <tr>
+            <td>Random ID <span class="mono">000000000000</span></td>
+            <td class="err-text">Blocked (403)</td>
+            <td>Not on the voter list at all</td>
+          </tr>
+          <tr>
+            <td>Vote twice in same election</td>
+            <td class="err-text">Blocked (409)</td>
+            <td>One person, one vote — system remembers</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="card">
+      <h2>Why post-quantum? (elevator pitch)</h2>
+      <table class="data">
+        <thead>
+          <tr><th></th><th>Old locks (RSA / ECDSA)</th><th>Our locks (Kyber + Dilithium)</th></tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>Future quantum computers</td>
+            <td>May break today’s math locks</td>
+            <td>Different math puzzle — still hard to break</td>
+          </tr>
+          <tr>
+            <td>For elections</td>
+            <td>Recorded votes could be read years later</td>
+            <td>Ballots stay sealed for the long term</td>
+          </tr>
+        </tbody>
+      </table>
+      <div class="plain-example">
+        <strong>Example:</strong> Imagine someone photocopying every sealed envelope today, hoping a future
+        machine can steam them open. We use envelopes designed so that even a quantum super-computer
+        is not expected to open them quickly.
+      </div>
+    </div>
+
+    <div class="card glossary">
+      <h2>Quick glossary (for Q&amp;A)</h2>
+      <dl>
+        <dt>Identity Authority (IA)</dt>
+        <dd>Checks you are on the voter list and issues your signed voter pass.</dd>
+        <dt>Election Authority (EA)</dt>
+        <dd>Only role that can open sealed ballots and publish the count.</dd>
+        <dt>Ballot ID</dt>
+        <dd>Your receipt number — proves your ballot reached the public board (not who you voted for).</dd>
+        <dt>Kyber / Dilithium</dt>
+        <dd>Standard “quantum-safe” lock and signature types (like NIST-approved deadbolts).</dd>
+        <dt>403 / 409</dt>
+        <dd>HTTP codes meaning “not allowed” — e.g. wrong area (403) or already voted (409).</dd>
+      </dl>
+    </div>
+      </main>
+      <footer id="site-footer"></footer>
+    </div>
+
+    <script type="module">
+      import { initPage, renderEligibleVotersTable } from "./js/ui.js";
+
+      initPage({
+        title: "Judge demo guide",
+        tagline: "5-minute walkthrough · SDG 16 fair elections",
+        active: "demo",
+      });
+
+      const res = await fetch("/api/demo/config");
+      const cfg = await res.json();
+      document.getElementById("votersTable").innerHTML = renderEligibleVotersTable(
+        cfg.sample_eligible_voters || cfg.demo_voters,
+      );
+    </script>
+  </body>
+</html>
