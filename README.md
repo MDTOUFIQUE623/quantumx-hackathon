@@ -8,21 +8,75 @@
 
 | Item | File / URL |
 |------|------------|
-| **Presentation deck** | [static/deck.html](static/deck.html) — open in browser, **Print → Save as PDF** · [presentation/SLIDES.md](presentation/SLIDES.md) for PowerPoint |
+| **Presentation deck (PPT)** | [presentation/phase2_pitch.pptx](presentation/phase2_pitch.pptx) |
+| **Web deck / PDF export** | [static/deck.html](static/deck.html) · [presentation/SLIDES.md](presentation/SLIDES.md) |
 | **README** | This file |
-| **Demo** | Run via Docker below · Full checklist: [SUBMISSION.md](SUBMISSION.md) |
+| **Demo** | Install & run below · Checklist: [SUBMISSION.md](SUBMISSION.md) |
 
-## Quick start (Docker — recommended)
+## Prerequisites
 
-**Requirements:** Docker Desktop running.
+| Tool | Why |
+|------|-----|
+| [Git](https://git-scm.com/) | Clone the repository |
+| [Docker Desktop](https://www.docker.com/products/docker-desktop/) | Runs API + liboqs (recommended on Windows) |
+| Modern browser (Chrome / Edge / Firefox) | Voting UI + PQ crypto in the browser |
+
+## Installation & run (Docker — recommended)
+
+**First build may take 10–20 minutes** (compiles liboqs inside the image). Later starts are much faster.
+
+### 1. Clone
 
 ```bash
-git clone https://github.com/MDTOUFIQUE623/quantumx-hackathon
+git clone https://github.com/MDTOUFIQUE623/quantumx-hackathon.git
 cd quantumx-hackathon
+```
+
+### 2. Start the app
+
+```bash
 docker compose up --build
 ```
 
-After first start, if attack lab shows API errors: `docker compose restart api`
+Wait until you see something like: `Uvicorn running on http://0.0.0.0:8000`
+
+### 3. Open in browser
+
+Start here: **http://localhost:8000/demo.html**
+
+### 4. Stop the app
+
+Press `Ctrl+C` in the terminal, or in another terminal:
+
+```bash
+docker compose down
+```
+
+### Troubleshooting
+
+| Problem | Fix |
+|---------|-----|
+| `docker: command not found` | Install and start **Docker Desktop** |
+| Port 8000 already in use | Stop the other app, or change port in `docker-compose.yml` |
+| Attack lab / API 404 | `docker compose restart api` then hard-refresh (`Ctrl+Shift+R`) |
+| Vote page crypto fails | Hard-refresh; ensure `static/vendor/liboqs-js/` exists in your clone |
+| Build fails on Windows | Use Docker (not local Python); enable WSL2 in Docker Desktop settings |
+
+### Verify it works
+
+```bash
+# Health check (in a new terminal while Docker is running)
+curl http://localhost:8000/api/health
+# Expected: {"status":"ok"}
+```
+
+Run automated tests:
+
+```bash
+docker compose run --rm -v ./pq_voting:/app/pq_voting -v ./tests:/app/tests -e PYTHONPATH=/app api pytest tests/ -q
+```
+
+Expected: **33 passed**
 
 | Page | URL |
 |------|-----|
@@ -58,14 +112,6 @@ On the vote page, click **Use** on a row or use quick-fill, then **Register**.
 | **Server** (FastAPI + `liboqs-python`) | IA credentials, bulletin verify, EA tally |
 | **Database** | SQLite append-only ledger |
 
-## Run tests
-
-```bash
-docker compose run --rm -v ./pq_voting:/app/pq_voting -v ./tests:/app/tests -e PYTHONPATH=/app api pytest tests/ -v
-```
-
-Expected: **33 passed**
-
 ## Browser dependency (vendored)
 
 `static/vendor/liboqs-js/` is included in the repo so judges can vote after `git clone` without extra npm steps. To refresh:
@@ -79,17 +125,28 @@ Copy-Item -Recurse node_modules/@oqs/liboqs-js liboqs-js
 
 See [static/vendor/README.md](static/vendor/README.md).
 
-## Local Python (optional)
+## Local Python (optional — advanced)
+
+Not recommended on Windows unless you already built [liboqs](https://github.com/open-quantum-safe/liboqs) natively. **Use Docker above for judges.**
 
 ```bash
 python -m venv .venv
+# Windows:
 .venv\Scripts\activate
+# macOS / Linux:
+# source .venv/bin/activate
+
 pip install -r requirements.txt
-set PQ_VOTING_DATA_DIR=data
-uvicorn pq_voting.api.main:app --reload
 ```
 
-Requires native [liboqs](https://github.com/open-quantum-safe/liboqs) build on Windows — **Docker is easier**.
+**Windows (cmd):** `set PQ_VOTING_DATA_DIR=data`  
+**macOS / Linux:** `export PQ_VOTING_DATA_DIR=data`
+
+```bash
+uvicorn pq_voting.api.main:app --reload --host 0.0.0.0 --port 8000
+```
+
+Then open http://localhost:8000/demo.html
 
 ## Project structure
 
@@ -97,7 +154,7 @@ Requires native [liboqs](https://github.com/open-quantum-safe/liboqs) build on W
 pq_voting/          # Python backend (crypto, API, DB, IA roll)
 static/             # UI (HTML, CSS, JS, deck.html, vendor)
 tests/              # pytest (33 tests)
-presentation/       # SLIDES.md for PowerPoint
+presentation/       # phase2_pitch.pptx, SLIDES.md
 DEMO_SCRIPT.md      # 5–7 min judge walkthrough
 PITCH.md            # 2 min narrative
 SUBMISSION.md       # Hackathon checklist
