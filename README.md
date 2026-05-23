@@ -81,7 +81,7 @@ Expected: **33 passed**
 | Page | URL |
 |------|-----|
 | **Judge demo guide** (start here) | http://localhost:8000/demo.html |
-| Register & vote | http://localhost:8000/ |
+| Register · vote · verify (Silk UI) | http://localhost:8000/?view=register · `?view=vote` · `?view=verify` |
 | **Presentation deck** | http://localhost:8000/deck.html |
 | Attack lab | http://localhost:8000/attacks.html |
 | SDG 16 pitch | http://localhost:8000/pitch.html |
@@ -102,7 +102,7 @@ Hard-refresh static pages after updates: `Ctrl+Shift+R`
 | Kabir Singh | 1995-09-03 | 900033334444 | DL-07-Delhi |
 | Priya Nair | 2000-01-28 | 900055556666 | KA-12-Bangalore |
 
-On the vote page, click **Use** on a row or use quick-fill, then **Register**.
+On **Register**, click **Use** on a sample row or quick-fill, then **Register voter**.
 
 ## Architecture
 

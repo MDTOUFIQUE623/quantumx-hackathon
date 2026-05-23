@@ -3,98 +3,90 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>PQ Voting — Election Tally</title>
+    <title>PQ Voting — Admin Tally</title>
     <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
-    <link rel="stylesheet" href="/css/app.css" />
+    <script src="https://cdn.tailwindcss.com?plugins=forms"></script>
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@500&family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap"
+      rel="stylesheet"
+    />
+    <script src="/js/silk-tailwind.js"></script>
+    <link rel="stylesheet" href="/css/silk.css" />
   </head>
-  <body>
-    <div class="app-bg" aria-hidden="true"></div>
-    <div class="app-wrap">
-      <div id="site-chrome"></div>
-      <div id="nav"></div>
-      <main class="page-main">
-    <div class="plain-example">
-      <strong>In plain English:</strong>
-      After voting closes, the election officer uses the master key to open each sealed envelope,
-      count the choices, and announce “Alice: 120, Ravi: 98…” — without publishing which person voted
-      for whom.
-    </div>
-    <p class="note">
-      <strong>Technical:</strong> Only the Election Authority can decrypt. Results show totals per
-      candidate, not voter identities. Optional password on the server is for demo “officer login” only.
-    </p>
-
-    <div class="card">
-      <h2>Official count</h2>
-      <label>Election</label>
-      <select id="election"></select>
-
-      <label>Officer password (optional demo)</label>
-      <input id="eaKey" type="password" placeholder="Only if server requires X-EA-Key" />
-
-      <div class="btn-row">
-        <button id="runTally" type="button">Run tally now</button>
-        <button id="loadTally" type="button" class="secondary">Load saved results</button>
-      </div>
-
-      <div id="summary"></div>
-      <div class="table-wrap" id="counts"></div>
-      <pre id="raw" class="output"></pre>
-    </div>
-      </main>
-      <footer id="site-footer"></footer>
-    </div>
+  <body class="bg-background text-on-background min-h-screen flex flex-col antialiased font-sans">
+    <div id="silk-root" class="flex flex-col flex-1"></div>
 
     <script type="module">
-      import { initPage } from "./js/ui.js";
-      initPage({
-        title: "Election tally",
-        tagline: "Election Authority decrypts ballots and publishes totals",
-        active: "tally",
-      });
+      import { mountShell } from "./js/silk-shell.js";
+      import { formatApiError } from "./js/ui.js";
+
+      mountShell("tally");
 
       const API = window.location.origin;
 
-      async function loadElections() {
-        const res = await fetch(`${API}/api/tally/elections`);
-        const data = await res.json();
-        const sel = document.getElementById("election");
-        data.elections.forEach((e) => {
-          const opt = document.createElement("option");
-          opt.value = e.election_id;
-          opt.textContent = `${e.title}`;
-          sel.appendChild(opt);
-        });
-      }
-
-      function renderResult(data) {
-        document.getElementById("summary").innerHTML = `
-          <p><strong>${data.title}</strong> — tallied ${data.tallied_at || "(cached)"}</p>
-          <p>${data.valid_ballots_counted} valid / ${data.total_ballots_on_board} on board
-          (${data.rejected_ballots} rejected)</p>
-          <p style="font-size:0.85rem;color:#555">${data.integrity_note || ""}</p>
-        `;
-
-        const rows = (data.counts || [])
-          .map(
-            (c, i) => `
-          <tr>
-            <td>${i === 0 && c.votes > 0 ? "★" : ""}</td>
-            <td>${c.name}</td>
-            <td class="mono">${c.candidate_id}</td>
-            <td><strong>${c.votes}</strong></td>
-          </tr>`,
-          )
-          .join("");
-
-        document.getElementById("counts").innerHTML = `
-          <table class="data">
-            <thead><tr><th></th><th>Candidate</th><th>ID</th><th>Votes</th></tr></thead>
-            <tbody>${rows || "<tr><td colspan=4>No votes</td></tr>"}</tbody>
-          </table>
-        `;
-        document.getElementById("raw").textContent = JSON.stringify(data, null, 2);
-      }
+      document.getElementById("silk-main").innerHTML = `
+        <div class="p-4 md:p-10 max-w-container-max mx-auto">
+          <header class="mb-8">
+            <h1 class="text-headline-lg text-on-surface">Live election tally</h1>
+            <p class="text-body-md text-on-surface-variant mt-2">Cryptographic aggregation and decryption console.</p>
+          </header>
+          <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 lg:gap-8 items-start">
+            <section class="layer-1 p-6 md:p-8 flex flex-col gap-5">
+              <div class="flex items-center gap-3 border-b border-outline-variant pb-4">
+                <span class="material-symbols-outlined text-tertiary text-2xl">lock_open</span>
+                <h2 class="text-lg font-semibold text-on-surface">Tally decryption</h2>
+              </div>
+              <div class="bg-error-container text-on-error-container border border-error rounded-lg p-4 flex gap-3 text-sm">
+                <span class="material-symbols-outlined shrink-0 icon-fill">warning</span>
+                <div>
+                  <strong class="block silk-label normal-case mb-1 text-on-error-container">Critical action</strong>
+                  <p class="opacity-90">Decrypting finalizes the tally for the selected election. Ensure polling is closed before running.</p>
+                </div>
+              </div>
+              <div>
+                <label class="silk-label block mb-2" for="election">Election</label>
+                <div class="input-bg rounded-lg px-3 py-2.5">
+                  <select id="election" class="bg-transparent w-full outline-none text-sm"></select>
+                </div>
+              </div>
+              <div>
+                <label class="silk-label block mb-2" for="eaKey">Kyber secret / officer key (optional)</label>
+                <div class="input-bg rounded-lg relative">
+                  <textarea id="eaKey" rows="3" spellcheck="false" placeholder="Only if server requires X-EA-Key header" class="w-full bg-transparent outline-none font-mono text-sm p-3 custom-scrollbar resize-none"></textarea>
+                  <span class="material-symbols-outlined absolute right-3 top-3 text-outline-variant pointer-events-none text-lg">visibility_off</span>
+                </div>
+                <p class="text-xs text-outline mt-1">Demo: leave empty unless EA password is configured on the server.</p>
+              </div>
+              <div class="flex flex-col sm:flex-row gap-3">
+                <button id="runTally" type="button" class="silk-btn-primary flex-1">
+                  <span class="material-symbols-outlined">key</span>
+                  Decrypt &amp; tally
+                </button>
+                <button id="loadTally" type="button" class="silk-btn-outline flex-1">Load cached</button>
+              </div>
+              <p id="tallyStatus" class="text-sm text-on-surface-variant hidden rounded-lg px-3 py-2 bg-surface-container-low"></p>
+            </section>
+            <section class="layer-1 p-6 md:p-8 flex flex-col gap-4 relative overflow-hidden min-h-[360px]">
+              <div class="flex justify-between items-center border-b border-outline-variant pb-4">
+                <h2 class="text-lg font-semibold text-on-surface">Current results</h2>
+                <div id="statusBadge" class="bg-error-container border border-error text-on-error-container px-3 py-1.5 rounded-full text-xs font-bold uppercase flex items-center gap-2">
+                  <span class="relative flex h-2.5 w-2.5">
+                    <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-error opacity-75"></span>
+                    <span class="relative inline-flex rounded-full h-2.5 w-2.5 bg-error"></span>
+                  </span>
+                  Tally locked
+                </div>
+              </div>
+              <div id="lockedOverlay" class="absolute inset-0 top-20 bg-surface-container-high/70 backdrop-blur-[2px] z-10 flex flex-col items-center justify-center rounded-b-lg">
+                <span class="material-symbols-outlined text-5xl text-on-surface-variant mb-3">lock</span>
+                <p class="font-semibold text-on-surface-variant">Encrypted state</p>
+                <p class="text-sm text-outline text-center max-w-xs mt-2 px-4">Results appear after successful EA decryption.</p>
+              </div>
+              <div id="chartArea" class="flex flex-col gap-6 mt-2 opacity-40 pointer-events-none select-none"></div>
+              <pre id="raw" class="hidden text-xs bg-surface-container-low p-3 rounded-lg overflow-auto max-h-36 font-mono border border-outline-variant"></pre>
+            </section>
+          </div>
+        </div>`;
 
       function headers() {
         const h = { "Content-Type": "application/json" };
@@ -103,19 +95,79 @@
         return h;
       }
 
+      function renderBars(data) {
+        const counts = data.counts || [];
+        const max = Math.max(1, ...counts.map((c) => c.votes));
+        const colors = ["bg-primary", "bg-secondary", "bg-tertiary", "bg-primary-container"];
+
+        document.getElementById("chartArea").innerHTML = counts
+          .map((c, i) => {
+            const barW = ((c.votes / max) * 100).toFixed(0);
+            const pct = data.valid_ballots_counted
+              ? ((c.votes / data.valid_ballots_counted) * 100).toFixed(1)
+              : "0.0";
+            return `
+            <div>
+              <div class="flex justify-between text-sm mb-1.5">
+                <span class="font-semibold text-on-surface">${c.name}</span>
+                <span class="font-mono text-on-surface-variant">${c.votes} votes · ${pct}%</span>
+              </div>
+              <div class="w-full h-3 bg-surface-container-highest rounded-full overflow-hidden border border-outline-variant/50">
+                <div class="h-full ${colors[i % colors.length]} rounded-full transition-all duration-700 ease-out" style="width:${barW}%"></div>
+              </div>
+            </div>`;
+          })
+          .join("");
+
+        document.getElementById("lockedOverlay").classList.add("hidden");
+        document.getElementById("chartArea").classList.remove("opacity-40", "pointer-events-none");
+        document.getElementById("statusBadge").innerHTML =
+          '<span class="material-symbols-outlined text-sm icon-fill">check_circle</span> Tallied';
+        document.getElementById("statusBadge").className =
+          "bg-primary/10 border border-primary text-primary px-3 py-1.5 rounded-full text-xs font-bold uppercase flex items-center gap-2";
+
+        const status = document.getElementById("tallyStatus");
+        status.classList.remove("hidden");
+        status.textContent = `${data.title} — ${data.valid_ballots_counted} valid / ${data.total_ballots_on_board} on board`;
+        document.getElementById("raw").classList.remove("hidden");
+        document.getElementById("raw").textContent = JSON.stringify(data, null, 2);
+      }
+
+      async function loadElections() {
+        const res = await fetch(`${API}/api/tally/elections`);
+        const data = await res.json();
+        const sel = document.getElementById("election");
+        data.elections.forEach((e) => {
+          const opt = document.createElement("option");
+          opt.value = e.election_id;
+          opt.textContent = e.title;
+          sel.appendChild(opt);
+        });
+      }
+
+      document.getElementById("eaKey").addEventListener("input", function () {
+        this.closest(".input-bg")?.classList.toggle("border-primary", this.value.length > 0);
+      });
+
       document.getElementById("runTally").addEventListener("click", async () => {
         const id = document.getElementById("election").value;
-        const res = await fetch(`${API}/api/tally/${id}`, {
-          method: "POST",
-          headers: headers(),
-        });
-        renderResult(await res.json());
+        const status = document.getElementById("tallyStatus");
+        status.classList.remove("hidden");
+        status.textContent = "Decrypting ballots with EA key…";
+        const res = await fetch(`${API}/api/tally/${id}`, { method: "POST", headers: headers() });
+        const body = await res.json();
+        if (!res.ok) {
+          status.textContent = formatApiError(body, res.status);
+          status.classList.add("text-error");
+          return;
+        }
+        renderBars(body);
       });
 
       document.getElementById("loadTally").addEventListener("click", async () => {
         const id = document.getElementById("election").value;
         const res = await fetch(`${API}/api/tally/${id}`);
-        renderResult(await res.json());
+        renderBars(await res.json());
       });
 
       await loadElections();
